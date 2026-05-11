@@ -136,7 +136,7 @@ class PhpredisClientFactory
 
         foreach ($dsns as $dsn) {
             $args = [
-                'host' => ($dsn->getTls() ? 'tls://' : '') . $dsn->getHost(),
+                'host' => ($dsn->getTls() ? ($dsn->getTlsVersion() !== null ? 'tlsv' . $dsn->getTlsVersion() . '://' : 'tls://') : '') . $dsn->getHost(),
                 'port' => (int) $dsn->getPort(),
                 'connectTimeout' => $connectionTimeout,
                 'persistent' => $connectionPersistent,
@@ -272,7 +272,7 @@ class PhpredisClientFactory
         }
 
         $connectParameters = [
-            $socket ?? ($dsn->getTls() ? 'tls://' : '') . $dsn->getHost(),
+            $socket ?? ($dsn->getTls() ? ($dsn->getTlsVersion() !== null ? 'tlsv' . $dsn->getTlsVersion() . '://' : 'tls://') : '') . $dsn->getHost(),
             $dsn->getPort(),
             $options['connection_timeout'],
             $persistentId,
