@@ -12,6 +12,7 @@ use Psr\Log\LoggerInterface;
 use Redis;
 use RedisArray;
 use RedisCluster;
+use ReflectionClass;
 use Relay\Relay;
 use SEEC\PhpUnit\Helper\ConsecutiveParams;
 use Snc\RedisBundle\Factory\PhpredisClientFactory;
@@ -411,6 +412,59 @@ class PhpredisClientFactoryTest extends TestCase
             ['php', Redis::SERIALIZER_PHP],
             ['json', Redis::SERIALIZER_JSON],
         ];
+    }
+
+    /** @dataProvider compressionTypes */
+    public function testLoadCompressionType(string $compressionType, int $compression): void
+    {
+        $factory = new PhpredisClientFactory(new RedisCallInterceptor($this->redisLogger));
+
+        $client = $factory->create(
+            Redis::class,
+            ['redis://localhost:6379'],
+            [
+                'compression' => $compressionType,
+                'connection_timeout' => 5,
+            ],
+            'default',
+            false,
+        );
+
+        self::assertSame($compression, $client->getOption(Redis::OPT_COMPRESSION));
+    }
+
+    public function testLoadCompressionTypeFail(): void
+    {
+        $factory = new PhpredisClientFactory(new RedisCallInterceptor($this->redisLogger));
+        $this->expectException(InvalidConfigurationException::class);
+
+        $factory->create(
+            Redis::class,
+            ['redis://localhost:6379'],
+            [
+                'compression' => 'unknown',
+                'connection_timeout' => 5,
+            ],
+            'default',
+            false,
+        );
+    }
+
+    /** @return list<array{0: string, 1: int}> */
+    public static function compressionTypes(): array
+    {
+        $r     = new ReflectionClass(Redis::class);
+        $types = [['none', Redis::COMPRESSION_NONE]];
+
+        foreach (['lzf' => 'COMPRESSION_LZF', 'zstd' => 'COMPRESSION_ZSTD', 'lz4' => 'COMPRESSION_LZ4'] as $name => $const) {
+            if (!$r->hasConstant($const)) {
+                continue;
+            }
+
+            $types[] = [$name, $r->getConstant($const)];
+        }
+
+        return $types;
     }
 
     public function testMethodsWithVariadicParameters(): void

@@ -27,7 +27,9 @@ use function array_keys;
 use function array_map;
 use function array_values;
 use function class_exists;
+use function constant;
 use function count;
+use function defined;
 use function get_class;
 use function implode;
 use function in_array;
@@ -37,6 +39,7 @@ use function is_string;
 use function phpversion;
 use function spl_autoload_register;
 use function sprintf;
+use function strtoupper;
 use function var_export;
 use function version_compare;
 
@@ -235,6 +238,16 @@ class PhpredisClientFactory
             $client->setOption(Redis::OPT_SERIALIZER, $this->loadSerializationType($options['serialization']));
         }
 
+        if (isset($options['compression'])) {
+            /** @psalm-suppress InvalidArgument */
+            $client->setOption(Redis::OPT_COMPRESSION, $this->loadCompressionType($options['compression']));
+        }
+
+        if (isset($options['compression_level'])) {
+            /** @psalm-suppress InvalidArgument */
+            $client->setOption(Redis::OPT_COMPRESSION_LEVEL, $options['compression_level']);
+        }
+
         return $loggingEnabled ? $this->createLoggingProxy($client, $alias) : $client;
     }
 
@@ -284,6 +297,14 @@ class PhpredisClientFactory
 
         if (isset($options['serialization'])) {
             $client->setOption(Redis::OPT_SERIALIZER, $this->loadSerializationType($options['serialization']));
+        }
+
+        if (isset($options['compression'])) {
+            $client->setOption(Redis::OPT_COMPRESSION, $this->loadCompressionType($options['compression']));
+        }
+
+        if (isset($options['compression_level'])) {
+            $client->setOption(Redis::OPT_COMPRESSION_LEVEL, $options['compression_level']);
         }
 
         if (isset($options['slave_failover'])) {
@@ -365,6 +386,14 @@ class PhpredisClientFactory
             $client->setOption($class::OPT_SERIALIZER, $this->loadSerializationType($options['serialization']));
         }
 
+        if (isset($options['compression'])) {
+            $client->setOption($class::OPT_COMPRESSION, $this->loadCompressionType($options['compression']));
+        }
+
+        if (isset($options['compression_level'])) {
+            $client->setOption($class::OPT_COMPRESSION_LEVEL, $options['compression_level']);
+        }
+
         return $client;
     }
 
@@ -385,6 +414,18 @@ class PhpredisClientFactory
         }
 
         throw new InvalidConfigurationException(sprintf('%s in not a valid serializer. Valid serializers: %s', $type, implode(', ', array_keys($types))));
+    }
+
+    /** @throws InvalidConfigurationException */
+    private function loadCompressionType(string $type): int
+    {
+        $const = 'Redis::COMPRESSION_' . strtoupper($type);
+
+        if (!defined($const)) {
+            throw new InvalidConfigurationException(sprintf('"%s" is not a valid compression type.', $type));
+        }
+
+        return (int) constant($const);
     }
 
     private function loadSlaveFailoverType(string $type): int
