@@ -37,7 +37,6 @@ snc_redis:
             alias: cluster
             dsn: "%env(json:REDIS_DSNS)%"
             options:
-                cluster: predis
                 prefix: foo
                 connection_timeout: 10
                 connection_persistent: true
